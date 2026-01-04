@@ -3,6 +3,14 @@
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
+export async function checkPasswordAction(password: string) {
+  const correctPassword = process.env.ADMIN_PASSWORD;
+  if (password === correctPassword) {
+    return { success: true };
+  }
+  return { success: false, message: 'Contraseña incorrecta. Intenta de nuevo.' };
+}
+
 /**
  * ACCIÓN: Agregar un nuevo video al ministerio
  * Procesa el formulario, genera la miniatura y guarda en Turso
