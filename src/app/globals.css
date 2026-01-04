@@ -4,3 +4,25 @@
   --background: #020617;
   --foreground: #f8fafc;
 }
+/* Personalización de la barra de desplazamiento */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b;
+}
+
+/* Efecto de suavizado en las imágenes */
+img {
+  mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+}
