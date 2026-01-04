@@ -1,65 +1,91 @@
 'use client';
 
-import React, { useState } from 'react';
-import { addVideoAction } from './actions';
+import React, { useState, useEffect } from 'react';
+import { addVideoAction, deleteVideoAction } from './actions';
+import { getVideos } from '@/lib/db'; // Asegúrate de tener esta función exportada en lib/db.ts
+import { Trash2, PlusCircle } from 'lucide-react';
 
 export default function AdminPage() {
-  const [status, setStatus] = useState<{success?: boolean, message?: string}>({});
+  const [videos, setVideos] = useState<any[]>([]);
+  const [status, setStatus] = useState({success: false, message: ''});
   const [loading, setLoading] = useState(false);
 
-  async function clientAction(formData: FormData) {
+  // Función para cargar la lista de videos
+  const loadVideos = async () => {
+    const data = await getVideos();
+    setVideos(data);
+  };
+
+  useEffect(() => { loadVideos(); }, []);
+
+  async function handleAdd(formData: FormData) {
     setLoading(true);
     const result = await addVideoAction(formData);
+    if (result.success) {
+      loadVideos();
+      (document.getElementById('video-form') as HTMLFormElement).reset();
+    }
     setStatus(result);
     setLoading(false);
-    
-    if (result.success) {
-      // Limpiar el formulario si todo salió bien
-      (document.getElementById('video-form') as HTMLFormElement).reset();
+  }
+
+  async function handleDelete(id: string) {
+    if (confirm('¿Estás seguro de eliminar este video del ministerio?')) {
+      const result = await deleteVideoAction(id);
+      if (result.success) loadVideos();
+      alert(result.message);
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8 flex flex-col items-center">
-      <div className="w-full max-w-md bg-slate-900 p-8 rounded-3xl border border-white/10 shadow-2xl">
-        <h1 className="text-2xl font-black text-amber-500 mb-6 uppercase tracking-tight">
-          Publicar Nuevo Contenido
-        </h1>
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-12">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
         
-        <form id="video-form" action={clientAction} className="space-y-6">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Título</label>
-            <input name="title" required className="w-full bg-slate-800 border-none rounded-xl p-4 text-sm focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Ej: No es con mis fuerzas" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Categoría</label>
-            <select name="category" className="w-full bg-slate-800 border-none rounded-xl p-4 text-sm outline-none appearance-none cursor-pointer">
+        {/* Lado Izquierdo: Formulario */}
+        <div className="bg-slate-900 p-8 rounded-3xl border border-white/10 shadow-2xl h-fit">
+          <h2 className="text-xl font-black text-amber-500 mb-6 flex items-center gap-2">
+            <PlusCircle /> NUEVO VIDEO
+          </h2>
+          <form id="video-form" action={handleAdd} className="space-y-4">
+            <input name="title" required className="w-full bg-slate-800 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-amber-500" placeholder="Título del video" />
+            <select name="category" className="w-full bg-slate-800 rounded-xl p-4 text-sm outline-none">
               <option value="Entrevistas">🎙️ Entrevistas</option>
-              <option value="Short">📱 Shorts de Bendición</option>
+              <option value="Short">📱 Shorts</option>
               <option value="Musica">🎵 Alabanzas</option>
             </select>
+            <input name="url" required className="w-full bg-slate-800 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-amber-500" placeholder="Link de YouTube" />
+            <button disabled={loading} className="w-full bg-amber-500 text-black font-black py-4 rounded-xl hover:bg-amber-400 transition-all">
+              {loading ? 'PUBLICANDO...' : 'PUBLICAR AHORA'}
+            </button>
+          </form>
+        </div>
+
+        {/* Lado Derecho: Lista de Gestión */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-slate-400 mb-6 uppercase tracking-widest">
+            Gestionar Contenido ({videos.length})
+          </h2>
+          <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+            {videos.map((v) => (
+              <div key={v.id} className="bg-slate-900/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-red-500/30 transition-all">
+                <div className="flex items-center gap-4">
+                  <img src={v.thumbnail} className="w-16 h-10 object-cover rounded-lg" />
+                  <div>
+                    <p className="text-sm font-bold line-clamp-1">{v.title}</p>
+                    <p className="text-[10px] text-amber-500 uppercase font-black">{v.category}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handleDelete(v.id.toString())}
+                  className="p-3 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Link de YouTube</label>
-            <input name="url" type="url" required className="w-full bg-slate-800 border-none rounded-xl p-4 text-sm focus:ring-2 focus:ring-amber-500 outline-none" placeholder="https://www.youtube.com/watch?v=..." />
-          </div>
-
-          <button 
-            disabled={loading}
-            type="submit" 
-            className={`w-full font-black py-4 rounded-xl transition-all active:scale-95 ${loading ? 'bg-slate-700 text-slate-400' : 'bg-amber-500 text-black hover:bg-amber-400'}`}
-          >
-            {loading ? 'PUBLICANDO...' : 'SUBIR A LA WEB'}
-          </button>
-        </form>
-
-        {status.message && (
-          <p className={`mt-6 text-center text-sm font-bold animate-in fade-in slide-in-from-top-2 ${status.success ? 'text-green-400' : 'text-red-400'}`}>
-            {status.message}
-          </p>
-        )}
       </div>
     </div>
   );
