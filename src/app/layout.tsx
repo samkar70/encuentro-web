@@ -10,27 +10,28 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "ENCUENTRO | Karla Perdomo",
-  description: "Un espacio de fe y esperanza. Entrevistas y mensajes que transforman el corazón.",
+  description: "Un espacio de fe y esperanza.",
+  // CONFIGURACIÓN DE ICONO PARA EVITAR ERROR 404
+  icons: {
+    icon: "/logo-encuentro.png",
+    apple: "/logo-encuentro.png",
+  },
   openGraph: {
     title: "ENCUENTRO con Karla Perdomo",
-    description: "🎙️ Mensajes de bendición y entrevistas con propósito.",
-    url: "https://encuentro-web.vercel.app",
-    siteName: "Encuentro",
+    description: "🎙️ Mensajes de bendición.",
     images: [{ url: "/logo-encuentro.png" }],
-    type: "website",
   },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950`}>
