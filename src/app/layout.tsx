@@ -1,42 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/react";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ENCUENTRO | Karla Perdomo",
-  description: "Un espacio de fe y esperanza.",
-  // CONFIGURACIÓN DE ICONO PARA EVITAR ERROR 404
-  icons: {
-    icon: "/logo-encuentro.png",
-    apple: "/logo-encuentro.png",
-  },
-  openGraph: {
-    title: "ENCUENTRO con Karla Perdomo",
-    description: "🎙️ Mensajes de bendición.",
-    images: [{ url: "/logo-encuentro.png" }],
-  },
+  // Corregimos el aviso de Next.js
+  metadataBase: new URL('http://localhost:3000'),
+  title: "Encuentro | Karla Perdomo",
+  description: "Un encuentro con la verdad y la palabra",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="es">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950`}>
+      <body className={`${inter.className} bg-slate-950 antialiased`}>
         {children}
-        <Analytics />
       </body>
     </html>
   );
