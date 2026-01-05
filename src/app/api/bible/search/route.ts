@@ -10,12 +10,12 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
 
-    // Buscamos en la base de datos local (Libro)
+    // Usamos la función que acabamos de exportar
     const results = searchBibleLocal(query);
     
     return NextResponse.json(results);
   } catch (error) {
-    console.error('Error en API de búsqueda:', error);
+    console.error('Error en API search:', error);
     return NextResponse.json({ error: 'Fallo interno' }, { status: 500 });
   }
 }
