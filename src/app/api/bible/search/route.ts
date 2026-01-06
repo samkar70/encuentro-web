@@ -10,12 +10,11 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
 
-    // Usamos la función que acabamos de exportar
     const results = searchBibleLocal(query);
     
+    // Enviamos los resultados directamente
     return NextResponse.json(results);
   } catch (error) {
-    console.error('Error en API search:', error);
-    return NextResponse.json({ error: 'Fallo interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Fallo en el servidor' }, { status: 500 });
   }
 }
