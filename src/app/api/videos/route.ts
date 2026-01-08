@@ -1,12 +1,16 @@
-export const dynamic = 'force-dynamic'; // Crucial para que el borrado se vea al instante
-import { getVideos } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const videos = await getVideos();
+    const db = await getDb();
+    // Seleccionamos url_video que es el nombre real en tu DB
+    const videos = await db.all('SELECT id, titulo, url_video, descripcion, categoria FROM videos ORDER BY id DESC');
+    await db.close();
     return NextResponse.json(videos);
-  } catch (error) {
-    return NextResponse.json({ error: "Error de servidor" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

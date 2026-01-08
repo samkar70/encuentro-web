@@ -1,174 +1,149 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Lock, CheckCircle2, Star, Share2, ArrowRight, X, Sparkles, Trophy, Award, PartyPopper } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Check, Lock, Star, Share2, Medal } from 'lucide-react';
 
 export function DiscipleshipJourney() {
-  const [currentDay, setCurrentDay] = useState<any>(null);
-  const [unlockedDays, setUnlockedDays] = useState<number>(1);
-  const [showCommitment, setShowCommitment] = useState(false);
-  const [isGraduated, setIsGraduated] = useState(false);
+  const [completedDays, setCompletedDays] = useState<number[]>([1]);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [dayData, setDayData] = useState<any>(null);
+  const [showPasoFirme, setShowPasoFirme] = useState(false);
+  const [showGraduation, setShowGraduation] = useState(false);
+  const [siteUrl, setSiteUrl] = useState('');
 
-  // Cargamos el progreso guardado en el celular del usuario
+  const timelineRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const saved = localStorage.getItem('encuentro-discipulado-progreso');
-    if (saved) setUnlockedDays(parseInt(saved));
+    fetch('/api/setup').then(res => res.json()).then(data => setSiteUrl(data?.url_sitio || ''));
   }, []);
 
-  const loadDay = async (day: number) => {
-    if (day > unlockedDays) return;
-    const res = await fetch(`/api/bible/discipleship?day=${day}`);
-    const data = await res.json();
-    setCurrentDay(data);
-  };
+  useEffect(() => {
+    if (selectedDay) {
+      fetch(`/api/discipleship?day=${selectedDay}`)
+        .then(res => res.json())
+        .then(data => setDayData(data))
+        .catch(err => console.error("Error cargando día:", err));
+    }
+  }, [selectedDay]);
 
-  const completeDay = () => {
-    const nextDay = currentDay.day + 1;
-    
-    // Si terminamos el Día 4, activamos la Graduación
-    if (currentDay.day === 4) {
-      setIsGraduated(true);
-      setUnlockedDays(5); // Marcamos todo como completado
-      localStorage.setItem('encuentro-discipulado-progreso', '5');
-    } else if (nextDay > unlockedDays && nextDay <= 4) {
-      setUnlockedDays(nextDay);
-      localStorage.setItem('encuentro-discipulado-progreso', nextDay.toString());
-      setShowCommitment(true);
+  const handleCompleteDay = () => {
+    if (selectedDay === 4) {
+      setShowGraduation(true);
     } else {
-      setShowCommitment(true);
+      setShowPasoFirme(true);
+    }
+    if (selectedDay && !completedDays.includes(selectedDay + 1)) {
+        setCompletedDays([...completedDays, selectedDay + 1]);
     }
   };
 
-  const shareFinalVictory = () => {
-    const text = `¡Me gradué del Curso de Discipulado en Encuentro! 🎓 He caminado 4 días profundizando en la fe con Karla Perdomo. ¡Te lo recomiendo!`;
-    if (navigator.share) navigator.share({ title: '¡Graduación Encuentro!', text }).catch(console.error);
-    else { navigator.clipboard.writeText(text); alert("Copiado al portapapeles"); }
+  const handleContinue = () => {
+    setShowPasoFirme(false);
+    setSelectedDay(null);
+    // Regreso automático a la sección de círculos naranjas
+    timelineRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleShareGraduation = async () => {
+    const shareText = `🎓 ¡Felicidades! He completado mis primeros 4 días en el Camino del Discípulo. Mi corazón está firme en la roca.\n\nComienza tu camino aquí:`;
+    if (navigator.share) {
+      await navigator.share({ title: 'Graduación Encuentro', text: shareText, url: siteUrl });
+    }
+  };
+
+  if (!selectedDay && !showPasoFirme && !showGraduation) {
+    /* VISTA DE LÍNEA DE TIEMPO (Diseño image_b9bb1e.png) */
+    return (
+      <div id="discipleship-section" ref={timelineRef} className="max-w-4xl mx-auto px-4 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-amber-500/60 mb-4">Camino del Discípulo</h2>
+          <h3 className="text-xl md:text-2xl font-serif text-white/40 uppercase tracking-widest">Transformación paso a paso</h3>
+        </div>
+
+        <div className="flex justify-between items-center relative max-w-2xl mx-auto">
+          <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/10 -z-10" />
+          {[1, 2, 3, 4].map((day) => (
+            <div key={day} className="flex flex-col items-center gap-4">
+              <button
+                onClick={() => completedDays.includes(day) && setSelectedDay(day)}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 ${
+                  completedDays.includes(day) 
+                    ? 'bg-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.4)]' 
+                    : 'bg-slate-900 text-white/20 border border-white/5'
+                }`}
+              >
+                {completedDays.includes(day) ? <Check size={20} strokeWidth={3} /> : <Lock size={18} />}
+              </button>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${completedDays.includes(day) ? 'text-amber-500' : 'text-white/20'}`}>
+                Día {day}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-20 bg-slate-900/20 border-y border-white/5 relative overflow-hidden">
-      {/* Adornos de fondo */}
-      <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none">
-        <Sparkles size={400} className="absolute -top-20 -right-20 text-amber-500" />
-      </div>
-
-      <div className="text-center mb-16 relative z-10">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-amber-500 mb-4">Camino del Discípulo</h2>
-        <p className="text-slate-400 text-xs font-light tracking-widest uppercase">Transformación paso a paso</p>
-      </div>
-
-      {/* MAPA DE RUTA INTERACTIVO */}
-      <div className="flex justify-between items-center relative mb-24 max-w-2xl mx-auto z-10">
-        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/10 -translate-y-1/2 z-0" />
-        {[1, 2, 3, 4].map((d) => (
-          <button 
-            key={d} onClick={() => loadDay(d)}
-            className={`relative z-10 w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all duration-700 shadow-xl ${
-              d < unlockedDays ? 'bg-amber-500 border-amber-500 text-white scale-110' : 
-              d === unlockedDays ? 'bg-slate-900 border-amber-500 text-amber-500 animate-pulse' : 
-              'bg-slate-950 border-slate-800 text-slate-700 cursor-not-allowed'
-            }`}
-          >
-            {d < unlockedDays ? <CheckCircle2 size={24} /> : d > unlockedDays ? <Lock size={18} /> : <span className="font-black text-lg">{d}</span>}
-            <span className={`absolute -bottom-10 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-opacity ${d <= unlockedDays ? 'opacity-100 text-amber-500/80' : 'opacity-20'}`}>
-              Día {d}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* CONTENIDO DE LA LECCIÓN */}
-      {currentDay && (
-        <div className="bg-slate-900/80 backdrop-blur-md p-8 md:p-14 rounded-[4rem] border border-white/10 animate-in slide-in-from-bottom-12 duration-700 shadow-2xl relative z-20">
-          <button onClick={() => setCurrentDay(null)} className="absolute top-10 right-10 text-slate-600 hover:text-white transition-colors"><X size={24} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      
+      {/* MODAL DE CONTENIDO PRINCIPAL */}
+      {selectedDay && dayData && !showPasoFirme && !showGraduation && (
+        <div className="bg-[#0F172A] border border-white/10 rounded-[2.5rem] w-full max-w-2xl p-8 md:p-12 relative overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+          <button onClick={() => setSelectedDay(null)} className="absolute top-8 right-8 text-white/40 hover:text-white">✕</button>
           
-          <div className="flex items-center gap-4 mb-10">
-            <div className="p-3 bg-amber-500/20 rounded-2xl text-amber-500"><Sparkles size={20} /></div>
-            <h3 className="text-3xl md:text-4xl text-white font-serif italic">{currentDay.title}</h3>
+          <div className="flex items-center gap-3 mb-8">
+             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Star className="text-amber-500 w-5 h-5 fill-current" />
+             </div>
+             <h4 className="text-2xl md:text-4xl font-serif italic text-white">{dayData.title}</h4>
           </div>
 
-          <div className="space-y-10 mb-12">
-            <div className="p-8 bg-amber-500/[0.03] rounded-[2.5rem] border border-amber-500/10 shadow-inner">
-              <span className="text-[10px] font-black uppercase text-amber-500/60 block mb-4 tracking-[0.2em]">Palabra Clave: {currentDay.verse_key}</span>
-              <p className="text-xl md:text-2xl text-slate-200 font-serif italic leading-relaxed">
-                "{currentDay.bibleData?.verse_text || "Cargando texto sagrado..."}"
-              </p>
-            </div>
-            
-            <div className="text-slate-300 leading-relaxed font-light text-lg space-y-4">
-              <p>{currentDay.content}</p>
-            </div>
-          </div>
-
-          <div className="bg-black/40 p-10 rounded-[3rem] border border-white/5 mb-12">
-            <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.4em] mb-8 text-center">Preguntas de Estudio</h4>
-            <p className="text-slate-300 italic leading-relaxed text-center font-serif text-lg">
-              {currentDay.study_questions}
+          {/* CAJA DE ENSEÑANZA (Se eliminó duplicado de image_ba3ac3.png) */}
+          <div className="bg-white/5 border border-white/5 rounded-3xl p-8 mb-10">
+            <p className="text-[9px] font-black uppercase tracking-widest text-amber-500/60 mb-4">
+              Palabra Clave: {dayData.verse_key}
+            </p>
+            <p className="text-xl font-serif italic text-white/90 leading-relaxed">
+              {dayData.content}
             </p>
           </div>
 
-          <button 
-            onClick={completeDay}
-            className="w-full py-7 bg-amber-600 rounded-full text-white font-black text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 hover:bg-amber-500 transition-all shadow-2xl shadow-amber-900/30 group"
-          >
-            Completar Día {currentDay.day} <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
+          <div className="bg-black/40 rounded-3xl p-8 mb-10 border border-white/5">
+              <p className="text-center text-[9px] font-black uppercase tracking-widest text-amber-500/60 mb-4">Preguntas de Estudio</p>
+              <p className="text-center text-white/80 italic font-serif leading-relaxed">{dayData.study_questions}</p>
+          </div>
+
+          <button onClick={handleCompleteDay} className="w-full bg-amber-500 py-5 rounded-2xl text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-transform flex items-center justify-center gap-2">
+            Completar Día {selectedDay} <Check size={16} />
           </button>
         </div>
       )}
 
-      {/* MODAL DE GRADUACIÓN (EL GRAN FINAL) */}
-      {isGraduated && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/98 backdrop-blur-2xl animate-in zoom-in-95 duration-500">
-          <div className="w-full max-w-xl bg-gradient-to-b from-slate-900 to-black rounded-[5rem] p-12 md:p-20 text-center border-2 border-amber-500/40 shadow-[0_0_100px_rgba(245,158,11,0.2)] relative overflow-hidden">
-            {/* Efectos visuales de fiesta */}
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-                <PartyPopper className="absolute top-10 left-10 text-amber-500/40 rotate-12" size={40} />
-                <Trophy className="absolute bottom-10 right-10 text-amber-500/40 -rotate-12" size={40} />
-            </div>
-
-            <div className="relative z-10">
-                <div className="mb-10 flex justify-center">
-                    <div className="p-8 bg-amber-500 rounded-full shadow-[0_0_40px_rgba(245,158,11,0.5)]">
-                        <Award size={80} className="text-white" />
-                    </div>
-                </div>
-
-                <h2 className="text-4xl md:text-5xl text-white font-serif italic mb-6">¡Felicidades, Discípulo!</h2>
-                <p className="text-slate-400 text-lg font-light mb-12 leading-relaxed">
-                    Has completado con éxito tu primer encuentro de 4 días. Tu corazón está ahora más firme en la roca que es Cristo.
-                </p>
-
-                <div className="space-y-4">
-                    <button 
-                        onClick={shareFinalVictory}
-                        className="w-full py-6 bg-white text-black rounded-full font-black text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-amber-100 transition-all shadow-xl"
-                    >
-                        <Share2 size={18} /> Compartir mi Graduación
-                    </button>
-                    <button 
-                        onClick={() => {setIsGraduated(false); setCurrentDay(null);}}
-                        className="w-full py-5 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors"
-                    >
-                        Continuar mi camino
-                    </button>
-                </div>
-            </div>
-          </div>
+      {/* MODAL PASO FIRME */}
+      {showPasoFirme && (
+        <div className="bg-[#0F172A] border border-white/10 rounded-[3rem] p-16 text-center max-w-md shadow-2xl animate-in fade-in zoom-in duration-300">
+          <Star className="w-16 h-16 text-amber-500 fill-current mx-auto mb-8" />
+          <h2 className="text-4xl font-serif italic text-white mb-6">Paso Firme</h2>
+          <p className="text-slate-400 mb-10 italic">Has desbloqueado el siguiente nivel de tu formación.</p>
+          <button onClick={handleContinue} className="w-full bg-amber-500 py-5 rounded-2xl text-black font-black uppercase tracking-widest text-xs">
+            Continuar al Día {selectedDay ? selectedDay + 1 : ''}
+          </button>
         </div>
       )}
 
-      {/* MODAL DE COMPROMISO INTERMEDIO (DÍAS 1-3) */}
-      {showCommitment && !isGraduated && currentDay && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-lg bg-slate-900 rounded-[4rem] p-14 text-center border border-white/10">
-            <div className="mb-8 flex justify-center"><Star className="text-amber-500" size={50} fill="currentColor" /></div>
-            <h2 className="text-3xl text-white font-serif italic mb-6">Paso Firme</h2>
-            <p className="text-slate-400 text-sm mb-10 tracking-wide">Has desbloqueado el siguiente nivel de tu formación.</p>
-            
-            <button onClick={() => setShowCommitment(false)} className="w-full py-5 bg-amber-600 rounded-full text-white font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition-all">
-              Continuar al Día {currentDay.day + 1}
-            </button>
+      {/* MODAL GRADUACIÓN */}
+      {showGraduation && (
+        <div className="bg-[#0F172A] border border-amber-500/30 rounded-[3.5rem] p-16 text-center max-w-md shadow-2xl animate-in fade-in zoom-in duration-300">
+          <div className="w-24 h-24 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-10 shadow-[0_0_30px_rgba(245,158,11,0.5)]">
+             <Medal className="w-12 h-12 text-white" />
           </div>
+          <h2 className="text-5xl font-serif italic text-white mb-6">¡Felicidades, Discípulo!</h2>
+          <p className="text-slate-400 mb-12 italic leading-relaxed">Has completado con éxito tu primer encuentro de 4 días. Tu corazón está ahora más firme en la roca que es Cristo.</p>
+          <button onClick={handleShareGraduation} className="w-full bg-[#FEF3C7] py-6 rounded-full text-black font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 mb-6">
+            <Share2 size={16} /> Compartir mi graduación
+          </button>
+          <button onClick={() => {setShowGraduation(false); setSelectedDay(null);}} className="text-[9px] uppercase tracking-[0.4em] text-white/30 font-bold hover:text-white">Continuar mi camino</button>
         </div>
       )}
     </div>

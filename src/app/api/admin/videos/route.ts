@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 
-export async function POST(request: Request) {
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
   try {
-    const { title, category, url, thumbnail, artist } = await request.json();
-
-    await db.execute({
-      sql: "INSERT INTO videos (title, category, url, thumbnail, artist) VALUES (?, ?, ?, ?, ?)",
-      args: [title, category, url, thumbnail, artist]
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Error en Turso" }, { status: 500 });
+    const db = await getDb();
+    // Seleccionamos según las columnas del PDF: id, titulo, url_video, descripcion, categoria 
+    const videos = await db.all('SELECT id, titulo, url_video, descripcion, categoria, fecha_publicacion FROM videos ORDER BY id DESC');
+    await db.close();
+    
+    return NextResponse.json(videos);
+  } catch (error: any) {
+    console.error("Error en API de videos:", error.message);
+    return NextResponse.json({ error: "Error al cargar videos" }, { status: 500 });
   }
 }

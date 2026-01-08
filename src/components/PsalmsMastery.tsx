@@ -1,267 +1,181 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-// IMPORTACIÓN CORREGIDA: Se añadió Hash y los demás iconos necesarios
-import { 
-  X, 
-  ChevronRight, 
-  Brain, 
-  Crown, 
-  Heart, 
-  Sparkles, 
-  BookOpen, 
-  ShieldCheck, 
-  Layout, 
-  Info, 
-  Anchor, 
-  Loader2,
-  Hash 
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Book, Heart, Star, Shield, Sun, Coffee, Play, Pause, Music } from 'lucide-react';
 
-const EMOTIONS = [
-  { id: 'traicion', label: 'Traición', salmos: [3, 41, 22] },
-  { id: 'estres', label: 'Estrés / Insomnio', salmos: [3, 4] },
-  { id: 'miedo', label: 'Miedo / Pánico', salmos: [27, 23, 16] },
-  { id: 'culpa', label: 'Culpa / Perdón', salmos: [32] },
-  { id: 'proposito', label: 'Propósito', salmos: [8, 15, 19] }
-];
+interface Psalm {
+  id: number;
+  numero_salmo: number;
+  titulo_occidental: string;
+  genero_gunkel: string;
+  analisis_psychologico: string;
+  clave_cristologica: string;
+  texto_clave: string;
+  url_audio: string;
+}
 
 export function PsalmsMastery() {
-  const [libroInfo, setLibroInfo] = useState<any>(null);
-  const [psalmsData, setPsalmsData] = useState<any[]>([]);
-  const [selectedPsalm, setSelectedPsalm] = useState<any>(null);
-  const [filter, setFilter] = useState<number[] | null>(null);
-  const [showSummary, setShowSummary] = useState(false);
-  const [mode, setMode] = useState<'therapeutic' | 'master'>('therapeutic');
-  const [loading, setLoading] = useState(true);
+  const [psalms, setPsalms] = useState<Psalm[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  
+  // --- NUEVO ESTADO PARA EL AUDIO ---
+  // Guarda el ID del salmo que se está reproduciendo actualmente. Null si ninguno.
+  const [playingPsalmId, setPlayingPsalmId] = useState<number | null>(null);
+  // Referencia para controlar los elementos de audio HTML ocultos
+  const audioRefs = useRef<Map<number, HTMLAudioElement>>(new Map());
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [infoRes, psalmsRes] = await Promise.all([
-          fetch('/api/bible/books-info?name=Salmos'),
-          fetch('/api/bible/psalms')
-        ]);
-        
-        const info = await infoRes.json();
-        const psalms = await psalmsRes.json();
-        
-        setLibroInfo(info);
-        setPsalmsData(Array.isArray(psalms) ? psalms : []);
-      } catch (e) {
-        console.error("Error cargando el tablero:", e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+    fetch('/api/psalms')
+      .then(res => res.json())
+      .then(data => setPsalms(Array.isArray(data) ? data : []));
   }, []);
 
-  const filteredData = filter 
-    ? psalmsData.filter(p => filter.includes(p.numero_salmo))
-    : psalmsData;
+  // Lógica de filtrado (Se mantiene igual)
+  const matchCategory = (genre: string, selected: string) => {
+    if (!genre || !selected) return false;
+    const normalized = genre.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (selected === 'ALABANZA') return normalized.includes('ALABANZA') || normalized.includes('SION');
+    if (selected === 'CONFIANZA') return normalized.includes('CONFIANZA');
+    if (selected === 'LAMENTO') return normalized.includes('LAMENTO') || normalized.includes('PENITENCIAL');
+    if (selected === 'SAPIENCIAL') return normalized.includes('SAPIENCIAL') || normalized.includes('DIDACTICO');
+    return normalized.includes(selected);
+  };
 
-  if (loading) return (
-    <div className="flex flex-col items-center py-20 text-amber-500/50">
-      <Loader2 className="animate-spin mb-4" size={40} />
-      <p className="font-serif italic">Sincronizando Tablero Espiritual...</p>
-    </div>
-  );
+  const filteredPsalms = psalms.filter(p => matchCategory(p.genero_gunkel, selectedCategory || ""));
+
+  // --- NUEVA FUNCIÓN: CONTROL DE PLAY/PAUSE ---
+  const toggleAudio = (id: number) => {
+    const currentAudio = audioRefs.current.get(id);
+    
+    // Si el que clicamos ya está sonando, lo pausamos.
+    if (playingPsalmId === id) {
+      currentAudio?.pause();
+      setPlayingPsalmId(null);
+    } else {
+      // Si había otro sonando, lo pausamos primero.
+      if (playingPsalmId !== null) {
+        audioRefs.current.get(playingPsalmId)?.pause();
+      }
+      // Reproducimos el nuevo.
+      currentAudio?.play();
+      setPlayingPsalmId(id);
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      
-      {/* 1. DASHBOARD DE EMOCIONES */}
-      <div className="bg-[#0f172a] rounded-[2.5rem] border border-white/5 p-8 mb-10 shadow-2xl relative overflow-hidden">
-        <button 
-          onClick={() => setShowSummary(true)}
-          className="absolute top-6 right-8 flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-[9px] font-bold text-amber-500 uppercase tracking-[0.3em] hover:bg-amber-500 hover:text-white transition-all z-10 group"
-        >
-          <BookOpen size={12} className="group-hover:rotate-12 transition-transform" />
-          Revelación de los Salmos
-        </button>
-
-        <header className="text-center mb-10">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500/60 mb-3">Tablero de Control Espiritual</h2>
-          <h3 className="text-3xl text-white font-serif italic max-w-md mx-auto">¿Qué necesita tu alma hoy?</h3>
-        </header>
-
-        <div className="flex flex-wrap justify-center gap-2">
-          {EMOTIONS.map(e => (
-            <button 
-              key={e.id}
-              onClick={() => setFilter(filter === e.salmos ? null : e.salmos)}
-              className={`px-4 py-2.5 rounded-xl border text-[10px] font-bold uppercase transition-all ${
-                filter === e.salmos ? 'bg-amber-600 border-amber-500 text-white shadow-lg' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
-              }`}
-            >
-              {e.label}
-            </button>
-          ))}
-          {filter && <button onClick={() => setFilter(null)} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={16}/></button>}
-        </div>
+    <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="text-center mb-12">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-amber-500/60 mb-4">Tablero de Control Espiritual</h2>
+        <h3 className="text-3xl md:text-5xl font-serif italic text-white/90">Salmos para cada estación</h3>
       </div>
 
-      {/* 2. GRILLA DE COLUMNAS DETALLADAS (3 COLUMNAS) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-        {filteredData.length > 0 ? (
-          filteredData.map((p) => (
-            <button 
-              key={p.numero_salmo}
-              onClick={() => setSelectedPsalm(p)}
-              className="flex flex-col gap-4 p-6 rounded-[2rem] bg-[#0f172a]/40 border border-white/5 hover:border-amber-500/40 transition-all text-left group relative h-full"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-amber-600 text-white font-bold text-xl shadow-lg group-hover:scale-110 transition-transform">
-                  {p.numero_salmo}
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 group-hover:text-amber-500/50 transition-colors">
-                  {p.genero_gunkel}
-                </span>
-              </div>
-              
-              <div className="flex-1">
-                <h4 className="text-white font-serif italic text-xl mb-3 leading-tight group-hover:text-amber-500 transition-colors line-clamp-2">
-                  {p.titulo_occidental}
-                </h4>
-                <p className="text-slate-400 text-xs leading-relaxed line-clamp-3 italic opacity-60">
-                  {p.analisis_psychologico}
-                </p>
-              </div>
+      {/* FILTROS (Se mantienen igual) */}
+      <div className="flex flex-wrap justify-center gap-4 mb-16">
+        {['ALABANZA', 'CONFIANZA', 'LAMENTO', 'SAPIENCIAL'].map((id) => (
+          <button
+            key={id}
+            onClick={() => setSelectedCategory(id === selectedCategory ? null : id)}
+            className={`px-6 py-3 rounded-full border text-xs uppercase tracking-widest transition-all duration-500 ${
+              selectedCategory === id ? 'bg-amber-500 border-amber-500 text-black font-bold scale-105' : 'bg-white/5 border-white/10 text-slate-400'
+            }`}
+          >
+            {id}
+          </button>
+        ))}
+      </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-white/5 mt-2">
-                 <span className="text-[8px] font-bold uppercase text-slate-500 tracking-[0.2em] flex items-center gap-1">
-                   <Brain size={10}/> Ver Análisis
-                 </span>
-                 <ChevronRight size={16} className="text-slate-700 group-hover:text-amber-500 transition-transform group-hover:translate-x-1" />
-              </div>
-            </button>
-          ))
+      <div className="min-h-[400px]">
+        {selectedCategory ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            {filteredPsalms.map((psalm) => {
+              // Verificamos si ESTA tarjeta es la que está sonando
+              const isPlaying = playingPsalmId === psalm.id;
+
+              return (
+                <div key={psalm.id} className={`bg-white/[0.03] border rounded-[2.5rem] p-10 flex flex-col h-full transition-all group duration-500 ${
+                    isPlaying ? 'border-amber-500/40 shadow-[0_0_30px_-5px_rgba(245,158,11,0.15)]' : 'border-white/5 hover:bg-white/[0.05]'
+                  }`}>
+                  
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      <span className={`text-6xl font-serif italic transition-colors duration-500 ${
+                        isPlaying ? 'text-amber-500' : 'text-amber-500/20 group-hover:text-amber-500/40'
+                      }`}>
+                        {psalm.numero_salmo}
+                      </span>
+                      <h4 className="text-xl font-serif italic text-white/90 mt-2">{psalm.titulo_occidental}</h4>
+                    </div>
+                    
+                    {/* --- REPRODUCTOR PERSONALIZADO --- */}
+                    {psalm.url_audio && (
+                      <div className="flex flex-col items-center gap-2">
+                        {/* Elemento de audio OCULTO (sin controls) */}
+                        <audio
+                          ref={(el) => { if (el) audioRefs.current.set(psalm.id, el); }}
+                          src={psalm.url_audio}
+                          onEnded={() => setPlayingPsalmId(null)} // Cuando termina, resetea el icono
+                        />
+                        
+                        {/* BOTÓN PLAY/PAUSE RESALTADO */}
+                        <button
+                          onClick={() => toggleAudio(psalm.id)}
+                          className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
+                            isPlaying 
+                              ? 'bg-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.5)] scale-110' // Estilo ACTIVO (Resaltado)
+                              : 'bg-black/40 text-amber-500 border border-amber-500/30 hover:bg-amber-500 hover:text-black hover:scale-105' // Estilo INACTIVO
+                          }`}
+                        >
+                          {isPlaying ? (
+                            <Pause className="w-6 h-6 fill-current" />
+                          ) : (
+                            <Play className="w-6 h-6 fill-current ml-1" /> // ml-1 para centrar visualmente el triángulo
+                          )}
+                        </button>
+                        <span className={`text-[9px] uppercase tracking-widest font-bold transition-colors ${isPlaying ? 'text-amber-500' : 'text-amber-500/50'}`}>
+                          {isPlaying ? 'Escuchando' : 'Audio'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* TEXTO BÍBLICO CLAVE */}
+                  {psalm.texto_clave && (
+                    <div className={`mb-8 p-6 rounded-3xl border-l transition-all duration-500 ${
+                      isPlaying ? 'bg-amber-500/10 border-amber-500' : 'bg-amber-500/[0.03] border-amber-500/30'
+                    }`}>
+                      <p className="text-sm text-slate-300 italic font-serif leading-relaxed line-clamp-3">
+                        "{psalm.texto_clave}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ANÁLISIS PSICOLÓGICO */}
+                  <div className="mb-8 flex-grow">
+                    <p className="text-[10px] text-amber-500/50 uppercase tracking-widest mb-3">Mapa del Éxito</p>
+                    <p className="text-sm text-slate-400 leading-relaxed">{psalm.analisis_psychologico}</p>
+                  </div>
+
+                  {/* CLAVE CRISTOLÓGICA */}
+                  <div className="mt-auto pt-8 border-t border-white/5 bg-gradient-to-b from-transparent to-blue-500/[0.02] rounded-b-[2.5rem]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_10px_blue]" />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-400/80">Revelación de Cristo</p>
+                    </div>
+                    <p className="text-sm text-blue-100/60 font-serif italic leading-relaxed">
+                      {psalm.clave_cristologica || "Contemplando la gloria del Mesías..."}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          <div className="col-span-full text-center py-20 text-slate-600 font-serif italic border border-dashed border-white/5 rounded-[2rem]">
-            No se encontraron salmos para esta selección de emociones.
+          <div className="flex flex-col items-center justify-center py-24 opacity-20 animate-pulse">
+            <Music className="w-12 h-12 mb-6" />
+            <p className="text-center font-serif italic text-xl">Selecciona una categoría para escuchar y meditar...</p>
           </div>
         )}
       </div>
-
-      {/* 3. MODAL DE REVELACIÓN (LOS 4 CAMPOS DINÁMICOS) */}
-      {showSummary && libroInfo && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="w-full max-w-5xl bg-slate-900 rounded-[3rem] border border-white/10 overflow-hidden flex flex-col h-[85vh] shadow-2xl">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-slate-950/40">
-              <div className="flex items-center gap-3 text-amber-500">
-                <ShieldCheck size={24} />
-                <h2 className="text-xl text-white font-serif italic text-left">Identidad de los Salmos</h2>
-              </div>
-              <button onClick={() => setShowSummary(false)} className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors"><X size={24}/></button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-                
-                <div className="bg-white/[0.02] border border-white/5 p-8 rounded-[2rem] hover:border-amber-500/20 transition-colors">
-                  <div className="flex items-center gap-3 mb-4 text-amber-500">
-                    <BookOpen size={20} /> <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Generales</span>
-                  </div>
-                  <p className="text-slate-300 text-lg leading-relaxed font-serif italic opacity-90">{libroInfo.generales}</p>
-                </div>
-
-                <div className="bg-white/[0.02] border border-white/5 p-8 rounded-[2rem] hover:border-blue-500/20 transition-colors">
-                  <div className="flex items-center gap-3 mb-4 text-blue-400">
-                    <Info size={20} /> <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Datos Importantes</span>
-                  </div>
-                  <p className="text-slate-300 text-base leading-relaxed italic opacity-90">{libroInfo.datos_importantes}</p>
-                </div>
-
-                <div className="bg-white/[0.02] border border-white/5 p-8 rounded-[2rem] hover:border-emerald-500/20 transition-colors">
-                  <div className="flex items-center gap-3 mb-4 text-emerald-400">
-                    <Layout size={20} /> <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Esquema</span>
-                  </div>
-                  <p className="text-slate-300 text-base leading-relaxed italic opacity-90">{libroInfo.esquema}</p>
-                </div>
-
-                <div className="bg-white/[0.02] border border-white/5 p-8 rounded-[2rem] hover:border-indigo-500/20 transition-colors">
-                  <div className="flex items-center gap-3 mb-4 text-indigo-400">
-                    <Anchor size={20} /> <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Megatemas</span>
-                  </div>
-                  <p className="text-slate-300 text-base leading-relaxed italic opacity-90">{libroInfo.megatemas}</p>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. MODAL DE FICHA (MODO DUAL) */}
-      {selectedPsalm && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="w-full max-w-4xl bg-[#020617] rounded-[3rem] border border-white/10 overflow-hidden flex flex-col h-[85vh] shadow-2xl relative">
-            
-            <div className="p-8 border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-900/20">
-              <div className="text-left flex items-center gap-4">
-                 <div className="w-14 h-14 rounded-2xl bg-amber-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-amber-900/20">
-                   {selectedPsalm.numero_salmo}
-                 </div>
-                 <div>
-                    <span className="text-amber-500/60 text-[9px] font-black uppercase tracking-[0.3em] mb-1 flex items-center gap-2">
-                      <Hash size={10}/> Análisis de Identidad
-                    </span>
-                    <h2 className="text-3xl text-white font-serif italic leading-none">{selectedPsalm.titulo_occidental}</h2>
-                 </div>
-              </div>
-
-              <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5">
-                <button 
-                  onClick={() => setMode('therapeutic')}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase transition-all ${mode === 'therapeutic' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                >
-                  <Brain size={14} /> Terapéutico
-                </button>
-                <button 
-                  onClick={() => setMode('master')}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase transition-all ${mode === 'master' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                >
-                  <Crown size={14} /> Maestro
-                </button>
-              </div>
-              <button onClick={() => setSelectedPsalm(null)} className="p-2 hover:bg-white/10 rounded-full text-slate-500 hover:text-white transition-colors"><X size={24}/></button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-12">
-               <div className="max-w-2xl mx-auto text-left">
-                  {mode === 'therapeutic' ? (
-                    <div className="animate-in slide-in-from-left-4 duration-500">
-                      <div className="flex items-center gap-3 mb-6 text-blue-400">
-                        <Heart size={20} />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Lo que tu mente necesita</span>
-                      </div>
-                      <p className="text-slate-200 text-2xl leading-[1.6] font-serif italic p-10 bg-blue-500/5 rounded-[2.5rem] border border-blue-500/20 shadow-inner">
-                        {selectedPsalm.analisis_psychologico}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="animate-in slide-in-from-right-4 duration-500">
-                      <div className="flex items-center gap-3 mb-6 text-amber-500">
-                        <Crown size={20} />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Lo que la Escritura declara</span>
-                      </div>
-                      <div className="space-y-8">
-                        <p className="text-slate-200 text-xl leading-[1.6] font-serif italic p-8 bg-amber-500/5 rounded-[2.5rem] border border-amber-500/20 shadow-inner">
-                          {selectedPsalm.eje_teologico_master}
-                        </p>
-                        <div className="pt-8 border-t border-white/10">
-                           <span className="text-[9px] font-black uppercase text-amber-500/50 tracking-[0.3em] mb-4 flex items-center gap-2"><Sparkles size={12}/> Clave Cristológica</span>
-                           <p className="text-white text-lg italic pl-6 border-l-2 border-amber-500/30 leading-relaxed">{selectedPsalm.clave_cristologica}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-               </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
