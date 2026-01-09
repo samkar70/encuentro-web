@@ -21,6 +21,9 @@ export function DailyVerse() {
       synth.current.cancel();
       setIsPlaying(false);
     } else {
+      // SEÑAL DE PAUSA PARA LA RADIO (Igual que en MoodBible)
+      window.dispatchEvent(new Event('pause-radio'));
+
       const text = `${verseData.verse_text}. ${verseData.reflection}`;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'es-ES';
@@ -70,7 +73,7 @@ export function DailyVerse() {
               — {verseData.reference}
             </p>
 
-            {/* Título de Reflexión (INTERCAMBIADO AQUÍ) */}
+            {/* Título de Reflexión */}
             <div className="flex items-center gap-4 mb-8 w-full">
               <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/5">

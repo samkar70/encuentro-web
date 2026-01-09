@@ -7,42 +7,41 @@ import { DiscipleshipJourney } from '@/components/DiscipleshipJourney';
 import { MoodBible } from '@/components/MoodBible';
 import { VideoGallery } from '@/components/VideoGallery';
 import { PhotoSegment } from '@/components/PhotoSegment';
+import { RadioPlayer } from '@/components/RadioPlayer'; // Importamos la Radio
 
 export default function Home() {
-  const [heroPhoto, setHeroPhoto] = useState<string | null>(null);
+  const [heroMedia, setHeroMedia] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/photos')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          // Búsqueda flexible para la sección 'hero'
           const hero = data.find((f: any) => f.seccion.toLowerCase() === 'hero');
-          if (hero) setHeroPhoto(hero.url_foto); // Usamos url_foto de la DB
+          if (hero) setHeroMedia(hero.url_foto);
         }
       })
-      .catch(err => console.error("Error cargando Hero:", err));
+      .catch(err => console.error("Error al cargar Hero:", err));
   }, []);
 
-  // Lógica de detección de video para el Hero (igual a PhotoSegment)
-  const isHeroVideo = heroPhoto ? /\.(mp4|webm|mov|ogg)($|\?)/i.test(heroPhoto) : false;
+  const isHeroVideo = heroMedia ? /\.(mp4|webm|mov|ogg)($|\?)/i.test(heroMedia) : false;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col items-center relative overflow-x-hidden">
       
-      {/* HERO - Adaptable a Foto o Video */}
+      {/* 1. HERO DINÁMICO */}
       <header className="w-full relative h-[50vh] md:h-[70vh] flex flex-col items-center justify-center overflow-hidden">
-        {heroPhoto && (
+        {heroMedia && (
           <>
             {isHeroVideo ? (
               <video 
-                src={heroPhoto} 
+                src={heroMedia} 
                 autoPlay loop muted playsInline 
                 className="absolute inset-0 w-full h-full object-cover opacity-40" 
               />
             ) : (
               <img 
-                src={heroPhoto} 
+                src={heroMedia} 
                 alt="Encuentro Hero" 
                 className="absolute inset-0 w-full h-full object-cover opacity-40" 
               />
@@ -60,7 +59,8 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="w-full relative z-10 flex flex-col gap-6 md:gap-12 pb-20 -mt-10 md:-mt-20">
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="w-full relative z-10 flex flex-col gap-8 md:gap-16 pb-20 -mt-10 md:-mt-20">
         <DailyVerse />
         
         <PhotoSegment sectionName="psalms" />
@@ -69,9 +69,7 @@ export default function Home() {
         <PhotoSegment sectionName="discipleship" />
         <DiscipleshipJourney />
 
-        <section id="moods" className="py-6 md:py-10">
-          <MoodBible />
-        </section>
+        <MoodBible />
 
         <PhotoSegment sectionName="moods" />
         
@@ -81,6 +79,15 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* RADIO PLAYER FLOTANTE */}
+      <RadioPlayer />
+
+      <footer className="w-full py-10 text-center border-t border-white/5 opacity-30">
+        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+          Encuentro © {new Date().getFullYear()}
+        </p>
+      </footer>
     </div>
   );
 }

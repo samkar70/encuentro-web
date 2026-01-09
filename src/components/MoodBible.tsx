@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sun, Shield, Users, DollarSign, Brain, Anchor, Heart, Leaf, 
-  Flame, Compass, Sparkles, CloudRain, Star, ShieldCheck, Play, Pause, Share2, Infinity
+  Flame, Compass, Sparkles, CloudRain, Star, Play, Pause, Share2, Infinity
 } from 'lucide-react';
 
 interface MoodOption { id: string; label: string; icon: React.ReactNode; }
@@ -29,6 +29,7 @@ export function MoodBible() {
   const [selectedMood, setSelectedMood] = useState<string>('PROPOSITO');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const synth = useRef<SpeechSynthesis | null>(null);
 
   const fetchWord = async (moodId: string) => {
@@ -37,21 +38,39 @@ export function MoodBible() {
     const json = await res.json();
     setData(json);
     setLoading(false);
+    if (isPlaying) {
+      synth.current?.cancel();
+      setIsPlaying(false);
+    }
   };
 
   useEffect(() => {
     if (typeof window !== 'undefined') synth.current = window.speechSynthesis;
-    fetchWord('PROPOSITO'); // Inicio inmediato con Propósito
+    fetchWord('PROPOSITO');
   }, []);
+
+  const toggleSpeech = () => {
+    if (!synth.current || !data) return;
+
+    if (isPlaying) {
+      synth.current.cancel();
+      setIsPlaying(false);
+    } else {
+      // LA ORDEN DE PAUSA: Enviamos el evento que la radio está esperando
+      window.dispatchEvent(new CustomEvent('pause-radio'));
+
+      const utterance = new SpeechSynthesisUtterance(`${data.verse_text}. ${data.reflection}`);
+      utterance.lang = 'es-ES';
+      utterance.onend = () => setIsPlaying(false);
+      synth.current.speak(utterance);
+      setIsPlaying(true);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-20">
       <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-white/5 border border-white/10 mb-6">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">1,189 Mensajes de Vida</span>
-        </div>
-        <h3 className="text-3xl md:text-5xl font-serif italic text-white/90">¿Qué busca tu alma hoy?</h3>
+        <h3 className="text-3xl md:text-5xl font-serif italic text-white/90 leading-tight">¿Qué busca tu alma hoy?</h3>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-6 mb-24">
@@ -60,7 +79,7 @@ export function MoodBible() {
             key={mood.id}
             onClick={() => { setSelectedMood(mood.id); fetchWord(mood.id); }}
             className={`flex flex-col items-center justify-center gap-4 aspect-square rounded-[2.5rem] border transition-all duration-700 ${
-              selectedMood === mood.id ? 'bg-amber-500 border-amber-500 text-black shadow-2xl scale-105' : 'bg-white/[0.03] border-white/5 text-slate-400 hover:bg-white/10 hover:border-white/20'
+              selectedMood === mood.id ? 'bg-amber-500 border-amber-500 text-black scale-105' : 'bg-white/[0.03] border-white/5 text-slate-400'
             }`}
           >
             <div className={selectedMood === mood.id ? 'text-black' : 'text-amber-500/50'}>{mood.icon}</div>
@@ -71,10 +90,20 @@ export function MoodBible() {
 
       <div className="min-h-[500px] flex items-center justify-center">
         {loading ? (
-          <div className="text-white/20 font-serif italic text-xl animate-pulse">Explorando entre los tesoros de Karla...</div>
+          <div className="text-white/20 animate-pulse">Buscando...</div>
         ) : data && (
-          <div className="bg-[#0F172A]/60 border border-white/10 rounded-[4rem] p-12 md:p-20 text-center backdrop-blur-3xl shadow-2xl animate-in fade-in zoom-in duration-1000 relative max-w-4xl w-full">
-            <h2 className="text-3xl md:text-5xl font-serif italic text-white leading-tight mb-8">"{data.verse_text}"</h2>
+          <div className="bg-[#0F172A]/60 border border-white/10 rounded-[4rem] p-12 md:p-20 text-center backdrop-blur-3xl relative max-w-4xl w-full mx-4">
+            <div className="absolute top-8 right-8 md:top-12 md:right-12">
+              <button 
+                onClick={toggleSpeech}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                  isPlaying ? 'bg-amber-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+              >
+                {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+              </button>
+            </div>
+            <h2 className="text-2xl md:text-5xl font-serif italic text-white leading-tight mb-8">"{data.verse_text}"</h2>
             <p className="text-amber-500 font-bold tracking-[0.4em] text-[10px] uppercase mb-12">— {data.reference}</p>
             <p className="text-xl md:text-2xl text-slate-300 font-serif italic leading-relaxed">{data.reflection}</p>
           </div>
