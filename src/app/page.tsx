@@ -13,66 +13,70 @@ export default function Home() {
 
   useEffect(() => {
     fetch('/api/photos')
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
-          const hero = data.find(f => f.seccion === 'hero');
-          if (hero) setHeroPhoto(hero.url_foto);
+          // Búsqueda flexible para la sección 'hero'
+          const hero = data.find((f: any) => f.seccion.toLowerCase() === 'hero');
+          if (hero) setHeroPhoto(hero.url_foto); // Usamos url_foto de la DB
         }
-      });
+      })
+      .catch(err => console.error("Error cargando Hero:", err));
   }, []);
+
+  // Lógica de detección de video para el Hero (igual a PhotoSegment)
+  const isHeroVideo = heroPhoto ? /\.(mp4|webm|mov|ogg)($|\?)/i.test(heroPhoto) : false;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col items-center relative overflow-x-hidden">
       
-      {/* 1. HERO - IDENTIDAD VISUAL */}
-      <header className="w-full relative h-[70vh] flex flex-col items-center justify-center overflow-hidden">
+      {/* HERO - Adaptable a Foto o Video */}
+      <header className="w-full relative h-[50vh] md:h-[70vh] flex flex-col items-center justify-center overflow-hidden">
         {heroPhoto && (
           <>
-            <img src={heroPhoto} alt="Hero" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+            {isHeroVideo ? (
+              <video 
+                src={heroPhoto} 
+                autoPlay loop muted playsInline 
+                className="absolute inset-0 w-full h-full object-cover opacity-40" 
+              />
+            ) : (
+              <img 
+                src={heroPhoto} 
+                alt="Encuentro Hero" 
+                className="absolute inset-0 w-full h-full object-cover opacity-40" 
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/10 via-[#020617]/60 to-[#020617]" />
           </>
         )}
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-7xl md:text-9xl font-serif italic text-white mb-4 tracking-tighter drop-shadow-2xl">
+        <div className="relative z-10 text-center px-6">
+          <h1 className="text-5xl md:text-9xl font-serif italic text-white mb-2 tracking-tighter drop-shadow-2xl">
             Encuentro
           </h1>
-          <p className="text-amber-500/80 text-[10px] md:text-xs font-black uppercase tracking-[0.6em] opacity-90">
+          <p className="text-amber-500/80 text-[8px] md:text-xs font-black uppercase tracking-[0.3em] md:tracking-[0.6em] opacity-90">
             Karla Perdomo • Palabra y Vida
           </p>
         </div>
       </header>
 
-      <main className="w-full relative z-10 flex flex-col gap-12 pb-32 -mt-20">
-        
-        {/* 2. REFLEXIÓN DIARIA */}
+      <main className="w-full relative z-10 flex flex-col gap-6 md:gap-12 pb-20 -mt-10 md:-mt-20">
         <DailyVerse />
         
         <PhotoSegment sectionName="psalms" />
-        
-        {/* 3. TABLERO DE SALMOS */}
         <PsalmsMastery />
 
         <PhotoSegment sectionName="discipleship" />
-        
-        {/* 4. CAMINO DEL DISCÍPULO */}
         <DiscipleshipJourney />
 
-        {/* 5. CENTRO DE CONSUELO (MoodBible) */}
-        <section id="moods" className="py-10">
+        <section id="moods" className="py-6 md:py-10">
           <MoodBible />
         </section>
 
-        {/* SECCIÓN ELIMINADA: GENERADOR DE POSTALES/SOCIAL GENERATOR */}
-
         <PhotoSegment sectionName="moods" />
         
-        {/* 6. GALERÍA DE VIDEOS */}
-        <section id="videos" className="py-24 bg-black/40 backdrop-blur-sm border-y border-white/5">
+        <section id="videos" className="py-16 md:py-24 bg-black/40 backdrop-blur-sm border-y border-white/5">
           <div className="max-w-6xl mx-auto px-4 text-center">
-             <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500 mb-16">
-               Momentos en Video
-             </h2>
              <VideoGallery />
           </div>
         </section>
