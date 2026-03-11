@@ -1,28 +1,42 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { DailyVerse } from '@/components/DailyVerse';
 import { PsalmsMastery } from '@/components/PsalmsMastery';
 import { DiscipleshipJourney } from '@/components/DiscipleshipJourney';
 import { MoodBible } from '@/components/MoodBible';
-import { VideoGallery } from '@/components/VideoGallery';
+
 import { PhotoSegment } from '@/components/PhotoSegment';
-import { RadioPlayer } from '@/components/RadioPlayer'; // Importamos la Radio
+import { RadioPlayer } from '@/components/RadioPlayer';
+
+interface PhotoData {
+  url_foto: string;
+  seccion: string;
+  titulo?: string;
+}
 
 export default function Home() {
   const [heroMedia, setHeroMedia] = useState<string | null>(null);
+  // Centralizamos todas las fotos en un solo fetch
+  const [photos, setPhotos] = useState<PhotoData[]>([]);
 
   useEffect(() => {
     fetch('/api/photos')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          const hero = data.find((f: any) => f.seccion.toLowerCase() === 'hero');
+          setPhotos(data);
+          const hero = data.find((f: PhotoData) => f.seccion.toLowerCase() === 'hero');
           if (hero) setHeroMedia(hero.url_foto);
         }
       })
-      .catch(err => console.error("Error al cargar Hero:", err));
+      .catch(err => console.error("Error al cargar fotos:", err));
   }, []);
+
+  // Helper para obtener foto de una sección sin nuevos fetches
+  const getPhoto = (sectionName: string): PhotoData | null =>
+    photos.find(p => p.seccion.toLowerCase() === sectionName.toLowerCase()) ?? null;
 
   const isHeroVideo = heroMedia ? /\.(mp4|webm|mov|ogg)($|\?)/i.test(heroMedia) : false;
 
@@ -40,10 +54,13 @@ export default function Home() {
                 className="absolute inset-0 w-full h-full object-cover opacity-40" 
               />
             ) : (
-              <img 
-                src={heroMedia} 
-                alt="Encuentro Hero" 
-                className="absolute inset-0 w-full h-full object-cover opacity-40" 
+              <Image
+                src={heroMedia}
+                alt="Encuentro Hero"
+                fill
+                priority
+                className="object-cover opacity-40"
+                sizes="100vw"
               />
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/10 via-[#020617]/60 to-[#020617]" />
@@ -63,31 +80,20 @@ export default function Home() {
       <main className="w-full relative z-10 flex flex-col gap-8 md:gap-16 pb-20 -mt-10 md:-mt-20">
         <DailyVerse />
         
-        <PhotoSegment sectionName="psalms" />
+        {/* Foto de sección — datos desde el fetch centralizado */}
+        <PhotoSegment sectionName="psalms" media={getPhoto('psalms')} />
         <PsalmsMastery />
 
-        <PhotoSegment sectionName="discipleship" />
+        <PhotoSegment sectionName="discipleship" media={getPhoto('discipleship')} />
         <DiscipleshipJourney />
 
         <MoodBible />
 
-        <PhotoSegment sectionName="moods" />
-        
-        <section id="videos" className="py-16 md:py-24 bg-black/40 backdrop-blur-sm border-y border-white/5">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-             <VideoGallery />
-          </div>
-        </section>
+        <PhotoSegment sectionName="moods" media={getPhoto('moods')} />
       </main>
 
       {/* RADIO PLAYER FLOTANTE */}
       <RadioPlayer />
-
-      <footer className="w-full py-10 text-center border-t border-white/5 opacity-30">
-        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-          Encuentro © {new Date().getFullYear()}
-        </p>
-      </footer>
     </div>
   );
 }

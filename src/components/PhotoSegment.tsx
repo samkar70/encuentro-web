@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 interface PhotoData {
   url_foto: string;
@@ -8,24 +8,12 @@ interface PhotoData {
   titulo?: string;
 }
 
-export function PhotoSegment({ sectionName }: { sectionName: string }) {
-  const [media, setMedia] = useState<PhotoData | null>(null);
+interface PhotoSegmentProps {
+  sectionName: string;
+  media: PhotoData | null;
+}
 
-  useEffect(() => {
-    fetch('/api/photos')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          // Búsqueda flexible (independiente de mayúsculas)
-          const found = data.find(
-            (item) => item.seccion.toLowerCase() === sectionName.toLowerCase()
-          );
-          if (found) setMedia(found);
-        }
-      })
-      .catch(err => console.error("Error cargando medios:", err));
-  }, [sectionName]);
-
+export function PhotoSegment({ sectionName, media }: PhotoSegmentProps) {
   if (!media) return null;
 
   // Detección de video: busca extensiones comunes
@@ -61,7 +49,7 @@ export function PhotoSegment({ sectionName }: { sectionName: string }) {
           </span>
         </div>
 
-        [cite_start]{/* Título dinámico desde la DB [cite: 4] */}
+        {/* Título dinámico desde la DB */}
         {media.titulo && (
           <div className="absolute bottom-12 left-12 right-12">
             <h3 className="text-2xl md:text-4xl font-serif italic text-white/90 tracking-tight drop-shadow-lg">

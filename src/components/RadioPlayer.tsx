@@ -37,7 +37,7 @@ export function RadioPlayer() {
         <audio 
           ref={audioRef} 
           src="https://stream.zeno.fm/akg9jodmss3uv" 
-          preload="none" 
+          preload="auto" 
         />
         
         <button 
