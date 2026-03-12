@@ -7,10 +7,11 @@ interface RadioPlayerProps {
   isPlaying: boolean;
   onToggle: () => void;
   visible: boolean;
+  streamTitle?: string;
 }
 
 // Mini-player flotante: aparece solo cuando el usuario sale del hero
-export function RadioPlayer({ isPlaying, onToggle, visible }: RadioPlayerProps) {
+export function RadioPlayer({ isPlaying, onToggle, visible, streamTitle }: RadioPlayerProps) {
   return (
     <div
       className={`fixed bottom-8 left-8 z-50 transition-all duration-500 ${
@@ -40,8 +41,8 @@ export function RadioPlayer({ isPlaying, onToggle, visible }: RadioPlayerProps) 
               {isPlaying ? 'En Vivo' : 'Radio'}
             </span>
           </div>
-          <span className="text-[8px] uppercase tracking-[0.2em] text-amber-500/60 font-bold">
-            Palabra y Vida
+          <span className="text-[10px] uppercase tracking-[0.2em] text-amber-500/60 font-bold line-clamp-1 max-w-[150px]">
+            {streamTitle || 'Palabra y Vida'}
           </span>
         </div>
       </div>

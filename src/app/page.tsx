@@ -23,6 +23,7 @@ export default function Home() {
   // --- AUDIO: fuente única de verdad ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [streamTitle, setStreamTitle] = useState<string>('');
 
   // --- Mini-player: visible cuando el hero sale de pantalla ---
   const heroRef = useRef<HTMLElement | null>(null);
@@ -52,6 +53,32 @@ export default function Home() {
     };
     window.addEventListener('pause-radio', handlePauseRadio);
     return () => window.removeEventListener('pause-radio', handlePauseRadio);
+  }, []);
+
+  // Metadata del streaming (Zeno.fm SSE)
+  useEffect(() => {
+    const mount = "akg9jodmss3uv";
+    const eventSource = new EventSource(`https://api.zeno.fm/mounts/metadata/subscribe/${mount}`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        // Zeno.fm suele enviar 'streamTitle' o 'title'
+        const newTitle = data.streamTitle || data.title;
+        if (newTitle) {
+          setStreamTitle(newTitle);
+        }
+      } catch (err) {
+        console.error("Error SSE metadata:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("EventSource failed:", err);
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
   }, []);
 
   // IntersectionObserver: mostrar mini-player cuando el hero sale de la vista
@@ -173,11 +200,11 @@ export default function Home() {
               <div className="flex items-center gap-2.5">
                 <span className={`h-2 w-2 rounded-full flex-shrink-0 ${isPlaying ? 'bg-red-500 animate-pulse' : 'bg-white/25'}`} />
                 <span className="text-sm md:text-base font-black uppercase tracking-widest text-white/80">
-                  {isPlaying ? 'Transmitiendo En Vivo' : 'Escuchar En Vivo'}
+                  {isPlaying ? (streamTitle || 'Transmitiendo En Vivo') : 'Escuchar En Vivo'}
                 </span>
               </div>
               <span className="text-[10px] uppercase tracking-[0.35em] text-amber-500/55 font-bold">
-                Radio · Palabra y Vida
+                Radio · {streamTitle ? 'En Directo' : 'Palabra y Vida'}
               </span>
             </div>
           </div>
@@ -212,6 +239,7 @@ export default function Home() {
         isPlaying={isPlaying}
         onToggle={togglePlay}
         visible={showMiniPlayer}
+        streamTitle={streamTitle}
       />
     </div>
   );
